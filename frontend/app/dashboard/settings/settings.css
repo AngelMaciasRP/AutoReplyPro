@@ -1,0 +1,453 @@
+/* frontend/app/dashboard/settings/settings.css */
+
+.advanced-settings-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 20px;
+    background: #f5f5f5;
+    min-height: 100vh;
+}
+
+.settings-header {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.settings-header h1 {
+    margin: 0;
+    color: #333;
+    font-size: 28px;
+}
+
+.clinic-name {
+    margin: 10px 0 0 0;
+    color: #666;
+    font-size: 16px;
+}
+
+.settings-loading,
+.settings-error {
+    text-align: center;
+    padding: 40px;
+    font-size: 16px;
+    color: #666;
+}
+
+.settings-tabs {
+    display: flex;
+    gap: 10px;
+    background: white;
+    padding: 0 20px;
+    border-bottom: 2px solid #e0e0e0;
+    border-radius: 12px 12px 0 0;
+    overflow-x: auto;
+}
+
+.tab {
+    padding: 15px 20px;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    color: #666;
+    transition: all 0.3s;
+    white-space: nowrap;
+}
+
+.tab:hover {
+    color: #4CAF50;
+    background: #f9f9f9;
+}
+
+.tab.active {
+    color: #4CAF50;
+    border-bottom-color: #4CAF50;
+}
+
+.settings-content {
+    background: white;
+    border-radius: 0 12px 12px 12px;
+    padding: 30px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.tab-pane {
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.tab-pane h2 {
+    margin: 0 0 25px 0;
+    color: #333;
+    font-size: 22px;
+    border-bottom: 2px solid #f0f0f0;
+    padding-bottom: 10px;
+}
+
+.settings-section {
+    margin-bottom: 25px;
+}
+
+.settings-section label {
+    display: block;
+    margin-bottom: 8px;
+    color: #333;
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.settings-section input[type="text"],
+.settings-section input[type="time"],
+.settings-section input[type="date"],
+.settings-section input[type="number"] {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+}
+
+.settings-section input[type="text"]:focus,
+.settings-section input[type="time"]:focus,
+.settings-section input[type="date"]:focus,
+.settings-section input[type="number"]:focus {
+    outline: none;
+    border-color: #4CAF50;
+    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+}
+
+.settings-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    font-weight: 400;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+}
+
+.indented {
+    margin-left: 30px;
+    padding-left: 15px;
+    border-left: 3px solid #f0f0f0;
+}
+
+/* TRABAJO DIAS */
+
+.work-days-selector {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.day-button {
+    padding: 12px 16px;
+    background: #f0f0f0;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.day-button:hover {
+    background: #e8e8e8;
+}
+
+.day-button.active {
+    background: #4CAF50;
+    color: white;
+    border-color: #45a049;
+}
+
+/* BLOQUEADOS */
+
+.blocked-input-group {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.blocked-input-group input {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.period-input-group {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.period-input-group>div {
+    display: flex;
+    flex-direction: column;
+}
+
+.period-input-group label {
+    margin-bottom: 5px;
+    font-size: 12px;
+}
+
+.period-input-group input {
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.blocked-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.blocked-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    background: #f9f9f9;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+}
+
+.blocked-item span {
+    color: #333;
+    font-weight: 500;
+}
+
+.blocked-period-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background: #f9f9f9;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+}
+
+.blocked-period-item>div {
+    flex: 1;
+}
+
+.blocked-period-item strong {
+    color: #4CAF50;
+}
+
+.blocked-period-item br {
+    margin: 5px 0;
+}
+
+/* BOTONES */
+
+.btn-add,
+.btn-remove {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+    font-size: 14px;
+}
+
+.btn-add {
+    background: #4CAF50;
+    color: white;
+}
+
+.btn-add:hover {
+    background: #45a049;
+}
+
+.btn-remove {
+    background: #f44336;
+    color: white;
+    padding: 8px 12px;
+    font-size: 12px;
+}
+
+.btn-remove:hover {
+    background: #da190b;
+}
+
+/* FOOTER */
+
+.settings-footer {
+    margin-top: 30px;
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.btn-save {
+    padding: 14px 28px;
+    background: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-save:hover {
+    background: #45a049;
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+}
+
+.btn-save:active {
+    transform: scale(0.98);
+}
+
+.message {
+    padding: 12px 16px;
+    border-radius: 6px;
+    font-weight: 500;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.message.success {
+    background: #e8f5e9;
+    color: #2e7d32;
+    border: 1px solid #4CAF50;
+}
+
+.message.error {
+    background: #ffebee;
+    color: #c62828;
+    border: 1px solid #f44336;
+}
+
+/* RESPONSIVE */
+
+@media (max-width: 768px) {
+    .advanced-settings-container {
+        padding: 10px;
+    }
+
+    .settings-header {
+        padding: 20px;
+    }
+
+    .settings-header h1 {
+        font-size: 22px;
+    }
+
+    .settings-content {
+        padding: 20px;
+    }
+
+    .settings-tabs {
+        overflow-x: auto;
+        scroll-behavior: smooth;
+    }
+
+    .tab {
+        padding: 12px 16px;
+        font-size: 12px;
+    }
+
+    .settings-row {
+        grid-template-columns: 1fr;
+    }
+
+    .work-days-selector {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    .period-input-group {
+        grid-template-columns: 1fr;
+    }
+
+    .blocked-input-group {
+        flex-direction: column;
+    }
+
+    .blocked-item,
+    .blocked-period-item {
+        flex-direction: column;
+        text-align: left;
+    }
+
+    .blocked-item span,
+    .blocked-period-item>div {
+        margin-bottom: 10px;
+    }
+
+    .btn-remove {
+        align-self: flex-start;
+    }
+
+    .settings-footer {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .btn-save {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .settings-header h1 {
+        font-size: 18px;
+    }
+
+    .settings-tabs {
+        overflow-x: scroll;
+    }
+
+    .tab {
+        padding: 10px 12px;
+        font-size: 11px;
+    }
+
+    .work-days-selector {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}

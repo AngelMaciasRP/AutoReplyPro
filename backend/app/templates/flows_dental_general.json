@@ -1,0 +1,18 @@
+{
+  "welcome": "Hola 👋 Gracias por comunicarte con Clínica Dental. ¿En qué podemos ayudarte hoy? Podemos agendar, dar precios orientativos o atender urgencias.",
+  "triage_urgency": {
+    "keywords": ["dolor", "duele", "sangre", "sangrando", "hinchado", "urgente", "emergencia", "no aguanto"],
+    "reply": "Lamentamos que estés con dolor. ¿Desde cuándo y en qué zona? Si es urgente, recomendamos venir hoy. ¿Querés que te reserve un turno prioritario?"
+  },
+  "prices": {
+    "limpieza": "Limpieza básica: $3000 ARS (orientativo)",
+    "empaste_simple": "Empaste simple: $5000 ARS (orientativo)",
+    "extraccion": "Extracción: $6000 ARS (orientativo)",
+    "blanqueamiento": "Blanqueamiento: $12000 ARS (orientativo)",
+    "consulta": "Consulta general: $2000 ARS (orientativo)"
+  },
+  "appointment_flow": "Para reservar necesitamos: Nombre completo, DNI (opcional), día y franja horaria preferida. ¿Podés pasar esos datos?",
+  "reminder_24h": "Recordatorio: Tenés un turno mañana a las {time}. Por favor confirmá respondiendo 'confirmo' o 'no puedo'.",
+  "reminder_6h": "Recordatorio: Tenés un turno en 6 horas a las {time}. Por favor confirmá respondiendo 'confirmo' o 'no puedo'.",
+  "system_prompt_openai": "Eres un asistente amigable especializado en odontología general. Respondes preguntas de forma clara, no das diagnósticos médicos definitivos. Si detectas una emergencia, indicas que se acerquen a la clínica o llamen al número de emergencias."
+}
