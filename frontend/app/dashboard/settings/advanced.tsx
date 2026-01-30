@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { t } from "../../../lib/i18n";
+import { useUserRole } from "@/src/hooks/useUserRole";
 import "./settings.css";
 
 type BlockedPeriod = {
@@ -38,6 +39,7 @@ type Settings = {
 };
 
 export default function AdvancedSettingsPage() {
+    const { role, ready } = useUserRole();
     const [clinicId, setClinicId] = useState<string | null>(null);
     const [settings, setSettings] = useState<Settings | null>(null);
     const [loading, setLoading] = useState(true);
@@ -189,6 +191,11 @@ export default function AdvancedSettingsPage() {
             blocked_periods: settings.blocked_periods.filter((_, i) => i !== idx),
         });
     };
+
+    if (!ready) return null;
+    if (role !== "admin") {
+        return <div className="settings-error">Sin permisos.</div>;
+    }
 
     if (loading) return <div className="settings-loading">Cargando...</div>;
     if (!settings)

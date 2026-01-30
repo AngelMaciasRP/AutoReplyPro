@@ -6,6 +6,7 @@ Frontend (Vercel)
 3) En Project Settings -> Environment Variables:
    - NEXT_PUBLIC_SUPABASE_URL
    - NEXT_PUBLIC_SUPABASE_ANON_KEY
+   - NEXT_PUBLIC_API_URL (URL del backend en Render/Railway)
 4) Framework preset: Next.js. Root Directory: frontend
 5) Deploy.
 
@@ -17,6 +18,7 @@ Backend (Render)
 5) Env vars:
    - SUPABASE_URL
    - SUPABASE_SERVICE_ROLE
+   - SITE_URL (URL del frontend en Vercel)
    - WHATSAPP_TOKEN
    - WHATSAPP_PHONE_NUMBER_ID
    - VERIFY_TOKEN
@@ -27,6 +29,15 @@ Backend (Railway)
 2) Root directory: backend (en Railway -> Settings -> Root Directory)
 3) Start command: uvicorn app.main:app --host 0.0.0.0 --port $PORT
 4) Env vars iguales a Render.
+
+Monitoreo / Observabilidad (recomendado)
+- Sentry (frontend + backend):
+  - Frontend: DSN en Vercel (NEXT_PUBLIC_SENTRY_DSN)
+  - Backend: SENTRY_DSN y middleware (opcional)
+- UptimeRobot o Better Uptime:
+  - Monitor HTTP: /api/health
+- Logs:
+  - Render/Railway logs + export a Logtail/Datadog si aplica
 
 CI/CD
 - GitHub Actions: .github/workflows/ci.yml

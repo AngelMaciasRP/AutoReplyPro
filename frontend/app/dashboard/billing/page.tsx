@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useState } from "react";
+import { useUserRole } from "@/src/hooks/useUserRole";
 import "./billing.css";
 
 type Plan = {
@@ -21,10 +22,8 @@ type Subscription = {
 };
 
 export default function BillingPage() {
-  const clinicId =
-    localStorage.getItem("active_clinic_id") ||
-    "bbe2d079-55fc-45a7-8aeb-99bb7cfc7112";
-
+  const { role, ready } = useUserRole();
+  const [clinicId, setClinicId] = useState<string | null>(null);
   const apiBase =
     process.env.NEXT_PUBLIC_API_URL ||
     process.env.NEXT_PUBLIC_BACKEND_URL ||
@@ -37,8 +36,14 @@ export default function BillingPage() {
   const [currency, setCurrency] = useState("USD");
   const [interval, setInterval] = useState("month");
   const [message, setMessage] = useState("");
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = localStorage.getItem("active_clinic_id");
+    setClinicId(stored || "bbe2d079-55fc-45a7-8aeb-99bb7cfc7112");
+  }, []);
 
   const loadData = async () => {
+    if (!clinicId) return;
     const [plansRes, subsRes] = await Promise.all([
       fetch(`${apiBase}/api/billing/plans`).then((r) => r.json()),
       fetch(`${apiBase}/api/billing/subscriptions?clinic_id=${clinicId}`).then((r) =>
@@ -51,7 +56,7 @@ export default function BillingPage() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [clinicId]);
 
   const createPlan = async () => {
     if (!name || price <= 0) return;
@@ -89,6 +94,11 @@ export default function BillingPage() {
       setMessage("Error creando suscripcion");
     }
   };
+
+  if (!ready) return null;
+  if (role !== "admin") {
+    return <div className="card">Sin permisos.</div>;
+  }
 
   return (
     <div className="billing-page">

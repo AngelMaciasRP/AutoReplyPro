@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useUserRole } from "@/src/hooks/useUserRole";
 import "./automations.css";
 
 type Rule = {
@@ -13,9 +14,8 @@ type Rule = {
 };
 
 export default function AutomationsPage() {
-  const clinicId =
-    localStorage.getItem("active_clinic_id") ||
-    "bbe2d079-55fc-45a7-8aeb-99bb7cfc7112";
+  const { role, ready } = useUserRole();
+  const [clinicId, setClinicId] = useState<string | null>(null);
 
   const apiBase =
     process.env.NEXT_PUBLIC_API_URL ||
@@ -30,8 +30,14 @@ export default function AutomationsPage() {
     "Hola {{patient_name}}, tu turno para {{date}} a las {{time}} fue registrado."
   );
   const [message, setMessage] = useState("");
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = localStorage.getItem("active_clinic_id");
+    setClinicId(stored || "bbe2d079-55fc-45a7-8aeb-99bb7cfc7112");
+  }, []);
 
   const loadRules = async () => {
+    if (!clinicId) return;
     const res = await fetch(`${apiBase}/api/automations?clinic_id=${clinicId}`);
     const data = await res.json();
     setRules(data.rules || []);
@@ -39,7 +45,7 @@ export default function AutomationsPage() {
 
   useEffect(() => {
     loadRules();
-  }, []);
+  }, [clinicId]);
 
   const createRule = async () => {
     if (!name.trim() || !template.trim()) return;
@@ -79,6 +85,11 @@ export default function AutomationsPage() {
     });
     loadRules();
   };
+
+  if (!ready) return null;
+  if (role !== "admin") {
+    return <div className="card">Sin permisos.</div>;
+  }
 
   return (
     <div className="automations-page">

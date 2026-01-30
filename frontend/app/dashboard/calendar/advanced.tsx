@@ -5,6 +5,7 @@ import { t } from "../../../lib/i18n";
 import { useAvailabilityCache } from "@/src/hooks/useAvailabilityCache";
 import { useDebounce } from "@/src/hooks/useDebounce";
 import { useWebSocket } from "@/src/hooks/useWebSocket";
+import { useUserRole } from "@/src/hooks/useUserRole";
 import "./calendar.css";
 
 type Appointment = {
@@ -19,6 +20,7 @@ type Appointment = {
 };
 
 export default function AdvancedCalendarPage() {
+    const { role, ready } = useUserRole();
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState<string>(
         new Date().toISOString().split("T")[0]
@@ -35,7 +37,6 @@ export default function AdvancedCalendarPage() {
     const [showCreatePatient, setShowCreatePatient] = useState(false);
     const [newPatientPhone, setNewPatientPhone] = useState("");
     const [newPatientEmail, setNewPatientEmail] = useState("");
-    const [showPatientList, setShowPatientList] = useState(false);
     const [selectedTreatment, setSelectedTreatment] = useState<string>("");
     const [availableSlots, setAvailableSlots] = useState<string[]>([]);
     const [selectedAvailableSlot, setSelectedAvailableSlot] = useState<string>("");
@@ -44,8 +45,10 @@ export default function AdvancedCalendarPage() {
     const [modalError, setModalError] = useState<string | null>(null);
     const [isBooking, setIsBooking] = useState(false);
     const [slotsLoading, setSlotsLoading] = useState(false);
+    const [lastCreated, setLastCreated] = useState<any | null>(null);
+    const [editingAppointmentId, setEditingAppointmentId] = useState<string | null>(null);
 
-    const clinicId = "bbe2d079-55fc-45a7-8aeb-99bb7cfc7112";
+    const [clinicId, setClinicId] = useState("bbe2d079-55fc-45a7-8aeb-99bb7cfc7112");
     const apiBase =
         process.env.NEXT_PUBLIC_API_URL ||
         process.env.NEXT_PUBLIC_BACKEND_URL ||
@@ -89,6 +92,14 @@ export default function AdvancedCalendarPage() {
     ];
 
     useEffect(() => {
+        const stored =
+            typeof window !== "undefined"
+                ? localStorage.getItem("active_clinic_id")
+                : null;
+        if (stored) setClinicId(stored);
+    }, []);
+
+    useEffect(() => {
         fetch(`${apiBase}/api/clinic-settings/${clinicId}`)
             .then((res) => res.json())
             .then((data) => setSettings(data))
@@ -101,6 +112,31 @@ export default function AdvancedCalendarPage() {
                 const apiTreatments = Array.isArray(data?.treatments) ? data.treatments : [];
                 if (apiTreatments.length > 0) {
                     setTreatments(apiTreatments);
+                } else {
+                    const defaults = ODONTO_TREATMENTS.map((t: any) => ({
+                        clinic_id: clinicId,
+                        name: t.name,
+                        duration_minutes: 30,
+                    }));
+                    Promise.all(
+                        defaults.map((payload) =>
+                            fetch(`${apiBase}/api/treatments/`, {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify(payload),
+                            })
+                        )
+                    ).then(() => {
+                        fetch(`${apiBase}/api/treatments?clinic_id=${clinicId}`)
+                            .then((res) => res.json())
+                            .then((fresh) => {
+                                const seeded = Array.isArray(fresh?.treatments)
+                                    ? fresh.treatments
+                                    : [];
+                                if (seeded.length > 0) setTreatments(seeded);
+                            })
+                            .catch(() => {});
+                    });
                 }
             })
             .catch((err) => console.error("Error cargando tratamientos:", err));
@@ -113,7 +149,7 @@ export default function AdvancedCalendarPage() {
                 setPatientResults(patients);
             })
             .catch((err) => console.error("Error cargando pacientes:", err));
-    }, [apiBase]);
+    }, [apiBase, clinicId]);
 
     const debouncedSearch = useDebounce((value: string) => {
         if (value.trim().length === 0) {
@@ -139,14 +175,40 @@ export default function AdvancedCalendarPage() {
         debouncedSearch(patientQuery);
     }, [patientQuery, debouncedSearch]);
 
-    const fetchAppointments = () => {
+    const todayStr = new Date().toISOString().split("T")[0];
+    const isPastDate = selectedDate < todayStr;
+    const treatmentMap = useMemo(() => {
+        const map = new Map<string, string>();
+        treatments.forEach((t: any) => map.set(t.id, t.name));
+        return map;
+    }, [treatments]);
+
+    const fetchAppointments = async () => {
         if (!selectedDate) return;
         setLoading(true);
-        fetch(`${apiBase}/api/calendar/?clinic_id=${clinicId}&date=${selectedDate}`)
-            .then((res) => res.json())
-            .then((data) => setAppointments(Array.isArray(data) ? data : []))
-            .catch((err) => console.error("Error cargando turnos:", err))
-            .finally(() => setLoading(false));
+        try {
+            const res = await fetch(
+                `${apiBase}/api/calendar/?clinic_id=${clinicId}&date=${selectedDate}`
+            );
+            const data = await res.json();
+            const rows = Array.isArray(data) ? data : [];
+            if (rows.length > 0) {
+                setAppointments(rows.filter((apt: any) => apt?.status !== "cancelled"));
+            } else {
+                const altRes = await fetch(
+                    `${apiBase}/api/appointments?clinic_id=${clinicId}&date=${selectedDate}`
+                );
+                const altData = await altRes.json();
+                const altRows = Array.isArray(altData?.appointments)
+                    ? altData.appointments
+                    : [];
+                setAppointments(altRows.filter((apt: any) => apt?.status !== "cancelled"));
+            }
+        } catch (err) {
+            console.error("Error cargando turnos:", err);
+        } finally {
+            setLoading(false);
+        }
     };
 
     useEffect(() => {
@@ -164,6 +226,10 @@ export default function AdvancedCalendarPage() {
 
     useEffect(() => {
         if (!selectedDate) {
+            setAvailableSlots([]);
+            return;
+        }
+        if (isPastDate) {
             setAvailableSlots([]);
             return;
         }
@@ -185,18 +251,9 @@ export default function AdvancedCalendarPage() {
             })
             .catch((err) => console.error("Error cargando slots:", err))
             .finally(() => setSlotsLoading(false));
-    }, [selectedDate, selectedTreatment]);
+    }, [selectedDate, selectedTreatment, isPastDate]);
 
     const daySlots = useMemo(() => generateDaySlots(), [settings, selectedDate]);
-    const sortedPatients = useMemo(
-        () =>
-            [...allPatients].sort((a: any, b: any) =>
-                (a.full_name || "").localeCompare(b.full_name || "", "es", {
-                    sensitivity: "base",
-                })
-            ),
-        [allPatients]
-    );
 
     const handleCreatePatient = () => {
         if (!patientName.trim()) {
@@ -242,21 +299,35 @@ export default function AdvancedCalendarPage() {
             setModalError(t(locale, "calendar.completeFields"));
             return;
         }
+        if (isPastDate) {
+            setModalError("No se puede agendar en fechas pasadas.");
+            return;
+        }
         setIsBooking(true);
         setModalError(null);
         setBookingMessage(null);
-        fetch(`${apiBase}/api/appointments`, {
-            method: "POST",
+        const url = editingAppointmentId
+            ? `${apiBase}/api/appointments/${editingAppointmentId}/reschedule`
+            : `${apiBase}/api/appointments`;
+        const payload = editingAppointmentId
+            ? {
+                  appointment_id: editingAppointmentId,
+                  new_date: selectedDate,
+                  new_time: selectedAvailableSlot,
+              }
+            : {
+                  clinic_id: clinicId,
+                  patient_id: patientId,
+                  patient_name: patientName,
+                  patient_phone: "",
+                  date: selectedDate,
+                  start_time: selectedAvailableSlot,
+                  treatment_id: selectedTreatment,
+              };
+        fetch(url, {
+            method: editingAppointmentId ? "PATCH" : "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                clinic_id: clinicId,
-                patient_id: patientId,
-                patient_name: patientName,
-                patient_phone: "",
-                date: selectedDate,
-                start_time: selectedAvailableSlot,
-                treatment_id: selectedTreatment,
-            }),
+            body: JSON.stringify(payload),
         })
             .then((res) => res.json())
             .then((data) => {
@@ -264,12 +335,21 @@ export default function AdvancedCalendarPage() {
                     setBookingMessage(data.error);
                     return;
                 }
-                setBookingMessage(t(locale, "calendar.created"));
+                if (data?.detail) {
+                    setBookingMessage(data.detail);
+                    return;
+                }
+                setLastCreated(data?.appointment || data);
+                setBookingMessage(
+                    editingAppointmentId ? "Turno actualizado." : t(locale, "calendar.created")
+                );
                 availabilityCache.clearCache();
                 fetchAppointments();
+                setTimeout(() => fetchAppointments(), 300);
                 setPatientName("");
                 setPatientId(null);
                 setSelectedAvailableSlot("");
+                setEditingAppointmentId(null);
                 if (socket) {
                     socket.emit("create_appointment", {
                         clinic_id: clinicId,
@@ -334,11 +414,54 @@ export default function AdvancedCalendarPage() {
     };
 
     const renderDayAgenda = () => {
-        const selectedAppointments = appointments || [];
+        const selectedAppointments = (appointments || []).filter(
+            (apt) => apt?.status !== "cancelled"
+        );
         return (
             <div className="day-agenda">
+                {selectedAppointments.length > 0 && (
+                    <div className="agenda-list">
+                        {selectedAppointments.map((apt) => (
+                            <div key={apt.id} className="agenda-list-item">
+                                <span className="slot-time">
+                                    {normalizeTime(apt.start_time)}
+                                </span>
+                                <span className="slot-detail">
+                                    {apt.patient_name}
+                                </span>
+                                <small>
+                                    {apt.treatment_id
+                                        ? treatmentMap.get(apt.treatment_id) || "Tratamiento"
+                                        : "Tratamiento"}
+                                </small>
+                                <div className="agenda-actions">
+                                    <button
+                                        className="ghost"
+                                        onClick={() => {
+                                            setSelectedAvailableSlot(
+                                                normalizeTime(apt.start_time)
+                                            );
+                                            setSelectedTreatment(apt.treatment_id || "");
+                                            setEditingAppointmentId(apt.id);
+                                        }}
+                                    >
+                                        Modificar
+                                    </button>
+                                    <button
+                                        className="danger"
+                                        onClick={() => handleDeleteAppointment(apt.id)}
+                                    >
+                                        Eliminar
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
                 {daySlots.map((slot) => {
-                    const apt = selectedAppointments.find((a) => a.start_time === slot);
+                    const apt = selectedAppointments.find(
+                        (a) => normalizeTime(a.start_time) === slot
+                    );
                     return (
                         <div key={slot} className={apt ? "agenda-slot booked" : "agenda-slot"}>
                             <span className="slot-time">{slot}</span>
@@ -358,15 +481,20 @@ export default function AdvancedCalendarPage() {
         month: "long",
         year: "numeric",
     });
-    const todayStr = new Date().toISOString().split("T")[0];
     const canSubmit =
         !!patientName &&
         !!selectedDate &&
         !!selectedAvailableSlot &&
         !!selectedTreatment &&
-        !!patientId;
+        !!patientId &&
+        !isPastDate;
 
     if (loading && !appointments.length) return <div>Cargando calendario...</div>;
+
+    if (!ready) return null;
+    if (role !== "admin" && role !== "recepcion" && role !== "doctor") {
+        return <div>Sin permisos para ver calendario.</div>;
+    }
 
     return (
         <div className="advanced-calendar-container">
@@ -415,7 +543,7 @@ export default function AdvancedCalendarPage() {
                     <div className="modal large">
                         <div className="modal-header">
                             <div>
-                                <h3>Agenda del dia {selectedDate}</h3>
+                                <h3>Agenda del dia {formatDateLabel(selectedDate)}</h3>
                                 <p className="modal-subtitle">
                                     {appointments.length} turnos cargados
                                 </p>
@@ -451,16 +579,6 @@ export default function AdvancedCalendarPage() {
                                             <option key={p.id} value={p.full_name} />
                                         ))}
                                     </datalist>
-                                    <button
-                                        type="button"
-                                        className="ghost"
-                                        onClick={() => setShowPatientList((prev) => !prev)}
-                                        style={{ marginTop: 8, alignSelf: "flex-start" }}
-                                    >
-                                        {showPatientList
-                                            ? "Ocultar lista"
-                                            : "Ver lista de pacientes"}
-                                    </button>
                                     {!patientId && patientName.trim().length > 1 && (
                                         <button
                                             type="button"
@@ -472,29 +590,6 @@ export default function AdvancedCalendarPage() {
                                         </button>
                                     )}
                                 </div>
-                                {showPatientList && (
-                                    <div className="patient-list">
-                                        {sortedPatients.map((p: any) => (
-                                            <button
-                                                key={p.id}
-                                                type="button"
-                                                className="patient-list-item"
-                                                onClick={() => {
-                                                    setPatientName(p.full_name);
-                                                    setPatientId(p.id);
-                                                    setPatientQuery(p.full_name);
-                                                }}
-                                            >
-                                                <span>{p.full_name}</span>
-                                                {p.phone ? (
-                                                    <small>{p.phone}</small>
-                                                ) : (
-                                                    <small>sin telefono</small>
-                                                )}
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
                                 {showCreatePatient && (
                                     <div className="modal-field">
                                         <label>Telefono (opcional)</label>
@@ -547,7 +642,9 @@ export default function AdvancedCalendarPage() {
                                         onChange={(e) => setSelectedAvailableSlot(e.target.value)}
                                     >
                                         <option value="">
-                                            {slotsLoading
+                                            {isPastDate
+                                                ? "Fecha pasada"
+                                                : slotsLoading
                                                 ? "Cargando..."
                                                 : availableSlots.length
                                                 ? "Seleccionar"
@@ -579,7 +676,11 @@ export default function AdvancedCalendarPage() {
                                         onClick={handleCreateAppointment}
                                         disabled={!canSubmit || isBooking}
                                     >
-                                        {isBooking ? "Creando..." : "Crear"}
+                                        {isBooking
+                                            ? "Guardando..."
+                                            : editingAppointmentId
+                                            ? "Guardar cambios"
+                                            : "Crear"}
                                     </button>
                                 </div>
                                 {modalError && (
@@ -588,6 +689,15 @@ export default function AdvancedCalendarPage() {
                                 {bookingMessage && (
                                     <span className="booking-message">{bookingMessage}</span>
                                 )}
+                                <div className="booking-debug">
+                                    <small>clinic_id: {clinicId}</small>
+                                    {lastCreated?.id && (
+                                        <small>
+                                            ultimo turno: {lastCreated.id} (
+                                            {lastCreated.date} {lastCreated.start_time})
+                                        </small>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -617,5 +727,37 @@ export default function AdvancedCalendarPage() {
             }
         }
         return slots;
+    }
+
+    function formatDateLabel(value: string) {
+        if (!value) return "";
+        const [y, m, d] = value.split("-");
+        if (!y || !m || !d) return value;
+        return `${d}/${m}/${y}`;
+    }
+
+    function normalizeTime(value?: string) {
+        if (!value) return "";
+        const parts = value.split(":");
+        if (parts.length >= 2) {
+            return `${parts[0].padStart(2, "0")}:${parts[1].padStart(2, "0")}`;
+        }
+        return value;
+    }
+
+    function handleDeleteAppointment(appointmentId: string) {
+        const ok = window.confirm("¿Eliminar el turno seleccionado?");
+        if (!ok) return;
+        fetch(`${apiBase}/api/appointments/${appointmentId}`, {
+            method: "DELETE",
+        })
+            .then((res) => {
+                if (!res.ok) {
+                    throw new Error("No se pudo eliminar");
+                }
+                setAppointments((prev) => prev.filter((apt) => apt.id !== appointmentId));
+                fetchAppointments();
+            })
+            .catch((err) => setBookingMessage(`Error eliminando turno: ${err}`));
     }
 }

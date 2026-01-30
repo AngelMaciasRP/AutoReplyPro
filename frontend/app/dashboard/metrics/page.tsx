@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useState } from "react";
+import { useUserRole } from "@/src/hooks/useUserRole";
 import "./metrics.css";
 
 type Metric = {
@@ -9,6 +10,7 @@ type Metric = {
 };
 
 export default function MetricsPage() {
+  const { role, ready } = useUserRole();
   const apiBase =
     process.env.NEXT_PUBLIC_API_URL ||
     process.env.NEXT_PUBLIC_BACKEND_URL ||
@@ -29,6 +31,11 @@ export default function MetricsPage() {
   useEffect(() => {
     loadMetrics();
   }, []);
+
+  if (!ready) return null;
+  if (role !== "admin") {
+    return <div className="card">Sin permisos.</div>;
+  }
 
   return (
     <div className="metrics-page">

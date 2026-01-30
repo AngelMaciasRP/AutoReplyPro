@@ -11,6 +11,7 @@ def get_calendar_day(clinic_id: str, date: str):
             .select("id,date,start_time,patient_name,treatment_id,status,double_booked")
             .eq("clinic_id", clinic_id)
             .eq("date", date)
+            .neq("status", "cancelled")
             .order("start_time")
             .execute()
         )

@@ -30,6 +30,11 @@ export default function DashboardLayout({
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
+  const [role, setRole] = useState<string>("admin");
+  const apiBase =
+    process.env.NEXT_PUBLIC_API_URL ||
+    process.env.NEXT_PUBLIC_BACKEND_URL ||
+    "http://localhost:8000";
 
   useEffect(() => {
     const checkAuthAndClinic = async () => {
@@ -54,6 +59,28 @@ export default function DashboardLayout({
       }
 
       localStorage.setItem("active_clinic_id", clinic.clinic_id);
+      if (user?.id) {
+        localStorage.setItem("active_user_id", user.id);
+      }
+      const isPrimaryAdmin = user?.id === clinic.clinic_id;
+      localStorage.setItem("is_primary_admin", isPrimaryAdmin ? "true" : "false");
+      if (user?.email) {
+        localStorage.setItem("active_user_email", user.email);
+        try {
+          const res = await fetch(
+            `${apiBase}/api/clinic-users?clinic_id=${clinic.clinic_id}&email=${encodeURIComponent(
+              user.email
+            )}`
+          );
+          const data = await res.json();
+          const roleName = data?.users?.[0]?.role || "admin";
+          localStorage.setItem("user_role", roleName);
+          setRole(roleName);
+        } catch {
+          localStorage.setItem("user_role", "admin");
+          setRole("admin");
+        }
+      }
       setLoading(false);
     };
 
@@ -63,6 +90,21 @@ export default function DashboardLayout({
   if (loading) {
     return <p style={{ padding: 20 }}>Cargando dashboard...</p>;
   }
+
+  const allowedNav =
+    role === "admin"
+      ? navItems
+      : role === "recepcion"
+      ? navItems.filter((item) =>
+          ["/dashboard/calendar", "/dashboard/patients", "/dashboard/messages"].includes(
+            item.href
+          )
+        )
+      : role === "doctor"
+      ? navItems.filter((item) =>
+          ["/dashboard/calendar", "/dashboard/patients"].includes(item.href)
+        )
+      : [];
 
   return (
     <div className="dashboard-shell">
@@ -75,7 +117,7 @@ export default function DashboardLayout({
           </div>
         </div>
         <nav className="nav">
-          {navItems.map((item) => (
+          {allowedNav.map((item) => (
             <Link key={item.href} href={item.href} className="nav-link">
               {item.label}
             </Link>

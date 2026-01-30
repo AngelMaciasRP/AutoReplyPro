@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "../../../lib/supabaseClient";
+import { useUserRole } from "@/src/hooks/useUserRole";
 import { t } from "../../../lib/i18n";
 import "./patients.css";
 
@@ -36,6 +37,7 @@ type PatientFile = {
 };
 
 export default function PatientsPage() {
+  const { role, ready } = useUserRole();
   const [clinicId, setClinicId] = useState<string>(
     "bbe2d079-55fc-45a7-8aeb-99bb7cfc7112"
   );
@@ -62,7 +64,7 @@ export default function PatientsPage() {
   const [historyForm, setHistoryForm] = useState({
     treatment_id: "",
     notes: "",
-    visited_at: "",
+    visited_at: new Date().toISOString().split("T")[0],
     next_treatment_id: "",
     next_visit_at: "",
   });
@@ -138,6 +140,10 @@ export default function PatientsPage() {
             address: data.patient.address || "",
             notes: data.patient.notes || "",
           });
+          setHistoryForm((prev) => ({
+            ...prev,
+            visited_at: new Date().toISOString().split("T")[0],
+          }));
         }
       })
       .catch(() => {
@@ -193,10 +199,20 @@ export default function PatientsPage() {
   const handleAddHistory = () => {
     if (!selectedPatient) return;
     setMessage(null);
+    const payload = {
+      clinic_id: clinicId,
+      treatment_id: historyForm.treatment_id || null,
+      notes: historyForm.notes || null,
+      visited_at:
+        historyForm.visited_at ||
+        new Date().toISOString().split("T")[0],
+      next_treatment_id: historyForm.next_treatment_id || null,
+      next_visit_at: historyForm.next_visit_at || null,
+    };
     fetch(`http://localhost:8000/api/patients/${selectedPatient.id}/history`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ clinic_id: clinicId, ...historyForm }),
+      body: JSON.stringify(payload),
     })
       .then((res) => res.json())
       .then((data) => {
@@ -206,7 +222,7 @@ export default function PatientsPage() {
           setHistoryForm({
             treatment_id: "",
             notes: "",
-            visited_at: "",
+            visited_at: new Date().toISOString().split("T")[0],
             next_treatment_id: "",
             next_visit_at: "",
           });
@@ -263,6 +279,34 @@ export default function PatientsPage() {
       .catch((err) => setMessage(`Error: ${err}`));
   };
 
+  if (!ready) return null;
+  if (role !== "admin" && role !== "recepcion" && role !== "doctor") {
+    return <div className="form-card">Sin permisos para ver pacientes.</div>;
+  }
+
+  const handleDeletePatient = () => {
+    const targetId = selectedPatient?.id || null;
+    if (!targetId) return;
+    const ok = window.confirm("¿Eliminar paciente? Esta accion no se puede deshacer.");
+    if (!ok) return;
+    fetch(`http://localhost:8000/api/patients/${targetId}`, {
+      method: "DELETE",
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.error || data?.detail) {
+          setMessage(data.error || data.detail);
+          return;
+        }
+        setMessage("Paciente eliminado.");
+        setSelectedPatient(null);
+        setShowCreateForm(false);
+        setIsEditing(false);
+        loadPatients();
+      })
+      .catch((err) => setMessage(`Error: ${err}`));
+  };
+
   return (
     <div className="patients-page">
       <div className="patients-list">
@@ -300,8 +344,33 @@ export default function PatientsPage() {
               {isEditing ? t(locale, "patients.save") : t(locale, "patients.edit")}
             </button>
           )}
+            {selectedPatient && (
+              <button type="button" onClick={handleDeletePatient}>
+                Eliminar
+              </button>
+            )}
         </div>
         {message && <p className="message">{message}</p>}
+
+        {selectedPatient && (
+          <div className="form-card">
+            <h3>Datos del paciente</h3>
+            <div className="form-grid">
+              <div>
+                <strong>{selectedPatient.full_name}</strong>
+                <div>{selectedPatient.phone || ""}</div>
+                <div>{selectedPatient.email || ""}</div>
+              </div>
+              <div>
+                <div>Fecha nac.: {selectedPatient.dob || "-"}</div>
+                <div>Direccion: {selectedPatient.address || "-"}</div>
+              </div>
+              <div>
+                <div>Notas: {selectedPatient.notes || "-"}</div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {(showCreateForm || isEditing) && (
         <div className="form-card">
@@ -364,6 +433,38 @@ export default function PatientsPage() {
           <>
             <div className="form-card">
               <h3>{t(locale, "patients.history")}</h3>
+              <div className="form-grid">
+                <select
+                  value={historyForm.treatment_id}
+                  onChange={(e) =>
+                    setHistoryForm({ ...historyForm, treatment_id: e.target.value })
+                  }
+                >
+                  <option value="">Tratamiento</option>
+                  {treatments.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="date"
+                  value={historyForm.visited_at}
+                  onChange={(e) =>
+                    setHistoryForm({ ...historyForm, visited_at: e.target.value })
+                  }
+                />
+                <textarea
+                  placeholder="Notas de la visita"
+                  value={historyForm.notes}
+                  onChange={(e) =>
+                    setHistoryForm({ ...historyForm, notes: e.target.value })
+                  }
+                />
+                <button type="button" onClick={handleAddHistory}>
+                  Guardar en historial
+                </button>
+              </div>
               <ul className="history-list">
                 {history.map((item) => (
                   <li key={item.id}>

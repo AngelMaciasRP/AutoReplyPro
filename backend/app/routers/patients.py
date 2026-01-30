@@ -138,6 +138,24 @@ def update_patient(patient_id: str, payload: PatientUpdate):
         raise HTTPException(status_code=500, detail=str(exc))
 
 
+@router.delete("/patients/{patient_id}")
+def delete_patient(patient_id: str):
+    try:
+        res = (
+            supabase.table("patients")
+            .delete()
+            .eq("id", patient_id)
+            .execute()
+        )
+        if not res.data:
+            raise HTTPException(status_code=404, detail="Paciente no encontrado")
+        return {"ok": True}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
 @router.post("/patients/{patient_id}/history")
 def add_patient_history(patient_id: str, payload: PatientHistoryCreate):
     try:

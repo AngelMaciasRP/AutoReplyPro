@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useUserRole } from "@/src/hooks/useUserRole";
 import "./dashboard-home.css";
 
 type Appointment = {
@@ -16,13 +17,12 @@ type Treatment = {
 };
 
 export default function DashboardHome() {
+  const { role, ready } = useUserRole();
+
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [treatments, setTreatments] = useState<Treatment[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const clinicId =
-    localStorage.getItem("active_clinic_id") ||
-    "bbe2d079-55fc-45a7-8aeb-99bb7cfc7112";
+  const [clinicId, setClinicId] = useState<string | null>(null);
 
   const apiBase =
     process.env.NEXT_PUBLIC_API_URL ||
@@ -32,6 +32,14 @@ export default function DashboardHome() {
   const todayStr = new Date().toISOString().split("T")[0];
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = localStorage.getItem("active_clinic_id");
+    setClinicId(stored || "bbe2d079-55fc-45a7-8aeb-99bb7cfc7112");
+  }, []);
+
+  useEffect(() => {
+    if (!clinicId) return;
+    if (role !== "admin") return;
     const load = async () => {
       setLoading(true);
       const [aptsRes, treatmentsRes] = await Promise.all([
@@ -45,13 +53,18 @@ export default function DashboardHome() {
       setLoading(false);
     };
     load();
-  }, [apiBase, clinicId, todayStr]);
+  }, [apiBase, clinicId, todayStr, role]);
 
   const treatmentMap = useMemo(() => {
     const map = new Map<string, string>();
     treatments.forEach((t) => map.set(t.id, t.name));
     return map;
   }, [treatments]);
+
+  if (!ready) return null;
+  if (role !== "admin") {
+    return <div className="home-card">Sin permisos para ver el resumen.</div>;
+  }
 
   return (
     <div className="dashboard-home">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useUserRole } from "@/src/hooks/useUserRole";
 import "./roles.css";
 
 type Role = {
@@ -18,23 +19,30 @@ type ClinicUser = {
 };
 
 export default function RolesPage() {
-  const clinicId =
-    localStorage.getItem("active_clinic_id") ||
-    "bbe2d079-55fc-45a7-8aeb-99bb7cfc7112";
-
-  const apiBase =
-    process.env.NEXT_PUBLIC_API_URL ||
-    process.env.NEXT_PUBLIC_BACKEND_URL ||
-    "http://localhost:8000";
-
+  const { role, ready } = useUserRole();
   const [roles, setRoles] = useState<Role[]>([]);
   const [users, setUsers] = useState<ClinicUser[]>([]);
   const [email, setEmail] = useState("");
   const [selectedRole, setSelectedRole] = useState("recepcion");
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isPrimaryAdmin, setIsPrimaryAdmin] = useState(false);
+  const [clinicId, setClinicId] = useState<string | null>(null);
+
+  const apiBase =
+    process.env.NEXT_PUBLIC_API_URL ||
+    process.env.NEXT_PUBLIC_BACKEND_URL ||
+    "http://localhost:8000";
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = localStorage.getItem("active_clinic_id");
+    setClinicId(stored || "bbe2d079-55fc-45a7-8aeb-99bb7cfc7112");
+    setIsPrimaryAdmin(localStorage.getItem("is_primary_admin") === "true");
+  }, []);
 
   const load = async () => {
+    if (!clinicId) return;
     setLoading(true);
     const [rolesRes, usersRes] = await Promise.all([
       fetch(`${apiBase}/api/roles`).then((r) => r.json()),
@@ -47,9 +55,13 @@ export default function RolesPage() {
 
   useEffect(() => {
     load();
-  }, []);
+  }, [clinicId]);
 
   const inviteUser = async () => {
+    if (!isPrimaryAdmin) {
+      setMessage("Solo el admin principal puede invitar o cambiar roles.");
+      return;
+    }
     if (!email) return;
     setMessage(null);
     const res = await fetch(`${apiBase}/api/clinic-users`, {
@@ -71,6 +83,10 @@ export default function RolesPage() {
   };
 
   const updateRole = async (userId: string, role: string) => {
+    if (!isPrimaryAdmin) {
+      setMessage("Solo el admin principal puede invitar o cambiar roles.");
+      return;
+    }
     setMessage(null);
     const res = await fetch(`${apiBase}/api/clinic-users/${userId}`, {
       method: "PATCH",
@@ -84,6 +100,11 @@ export default function RolesPage() {
       setMessage("Error actualizando rol.");
     }
   };
+
+  if (!ready) return null;
+  if (role !== "admin") {
+    return <div className="roles-loading">Sin permisos.</div>;
+  }
 
   if (loading) return <div className="roles-loading">Cargando...</div>;
 
@@ -105,15 +126,22 @@ export default function RolesPage() {
 
       <section className="invite-card">
         <h2>Invitar usuario</h2>
+        {!isPrimaryAdmin && (
+          <p className="message">
+            Solo el admin principal puede invitar o cambiar roles.
+          </p>
+        )}
         <div className="invite-grid">
           <input
             placeholder="email@clinica.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            disabled={!isPrimaryAdmin}
           />
           <select
             value={selectedRole}
             onChange={(e) => setSelectedRole(e.target.value)}
+            disabled={!isPrimaryAdmin}
           >
             {roles.map((r) => (
               <option key={r.name} value={r.name}>
@@ -121,7 +149,7 @@ export default function RolesPage() {
               </option>
             ))}
           </select>
-          <button className="primary" onClick={inviteUser}>
+          <button className="primary" onClick={inviteUser} disabled={!isPrimaryAdmin}>
             Invitar
           </button>
         </div>
@@ -143,6 +171,7 @@ export default function RolesPage() {
               <select
                 value={u.role}
                 onChange={(e) => updateRole(u.id, e.target.value)}
+                disabled={!isPrimaryAdmin}
               >
                 {roles.map((r) => (
                   <option key={r.name} value={r.name}>
@@ -154,6 +183,7 @@ export default function RolesPage() {
               <button
                 className="ghost"
                 onClick={() => updateRole(u.id, u.role)}
+                disabled={!isPrimaryAdmin}
               >
                 Guardar
               </button>

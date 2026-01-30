@@ -541,6 +541,14 @@
     color: #666;
 }
 
+.booking-debug {
+    margin-top: 8px;
+    display: grid;
+    gap: 4px;
+    color: #888;
+    font-size: 11px;
+}
+
 /* RESPONSIVE */
 
 @media (max-width: 768px) {
@@ -752,6 +760,54 @@
     background: #fafafa;
 }
 
+.agenda-list {
+    display: grid;
+    gap: 6px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e6e6e6;
+}
+
+.agenda-list-item {
+    display: grid;
+    grid-template-columns: 70px 1fr auto;
+    gap: 6px 10px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    background: #fff;
+    border: 1px solid #eee;
+    font-size: 13px;
+}
+
+.agenda-list-item small {
+    grid-column: 2;
+    color: #777;
+}
+
+.agenda-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.agenda-actions .ghost {
+    background: #f0f0f0;
+    border: none;
+    padding: 6px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.agenda-actions .danger {
+    background: #f44336;
+    border: none;
+    color: #fff;
+    padding: 6px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
 .agenda-slot {
     display: flex;
     align-items: center;
@@ -857,32 +913,4 @@
     display: grid;
     gap: 6px;
     font-size: 13px;
-}
-
-.patient-list {
-    display: grid;
-    gap: 6px;
-    max-height: 220px;
-    overflow: auto;
-    border: 1px solid #eee;
-    border-radius: 8px;
-    padding: 8px;
-    background: #fafafa;
-}
-
-.patient-list-item {
-    border: none;
-    background: white;
-    padding: 8px 10px;
-    border-radius: 6px;
-    text-align: left;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 13px;
-    cursor: pointer;
-}
-
-.patient-list-item small {
-    color: #777;
 }

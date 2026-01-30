@@ -73,15 +73,12 @@ def list_roles():
 
 
 @router.get("/clinic-users")
-def list_clinic_users(clinic_id: str):
+def list_clinic_users(clinic_id: str, email: Optional[str] = None):
     try:
-        res = (
-            supabase.table("clinic_users")
-            .select("*")
-            .eq("clinic_id", clinic_id)
-            .order("created_at", desc=True)
-            .execute()
-        )
+        query = supabase.table("clinic_users").select("*").eq("clinic_id", clinic_id)
+        if email:
+            query = query.eq("email", email)
+        res = query.order("created_at", desc=True).execute()
         return {"users": res.data or []}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

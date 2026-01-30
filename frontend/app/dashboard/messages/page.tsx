@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useUserRole } from "@/src/hooks/useUserRole";
 import "./messages.css";
 
 type Thread = {
@@ -20,6 +21,7 @@ type Message = {
 };
 
 export default function MessagesPage() {
+  const { role, ready } = useUserRole();
   const clinicId =
     localStorage.getItem("active_clinic_id") ||
     "bbe2d079-55fc-45a7-8aeb-99bb7cfc7112";
@@ -101,6 +103,11 @@ export default function MessagesPage() {
       loadThreads();
     }
   };
+
+  if (!ready) return null;
+  if (role !== "admin" && role !== "recepcion") {
+    return <div className="empty-chat">Sin permisos para mensajeria.</div>;
+  }
 
   return (
     <div className="messages-page">

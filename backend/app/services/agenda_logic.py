@@ -62,13 +62,18 @@ def get_available_slots(
     if not is_work_day(work_days, date):
         return []
 
-    treatment = (
-        supabase.table("treatments")
-        .select("duration_minutes")
-        .eq("id", treatment_id)
-        .single()
-        .execute()
-    )
+    try:
+        treatment = (
+            supabase.table("treatments")
+            .select("duration_minutes")
+            .eq("id", treatment_id)
+            .single()
+            .execute()
+        )
+    except APIError as exc:
+        if exc.code == "PGRST116":
+            return []
+        raise
     if not treatment.data:
         return []
 
@@ -94,13 +99,17 @@ def get_available_slots(
 
     appointments = (
         supabase.table("appointments")
-        .select("start_time")
+        .select("start_time,status")
         .eq("clinic_id", clinic_id)
         .eq("date", date)
         .execute()
     )
 
-    busy_slots = [a["start_time"] for a in (appointments.data or [])]
+    busy_slots = [
+        a["start_time"]
+        for a in (appointments.data or [])
+        if a.get("status") != "cancelled"
+    ]
     allow_overbooking = allow_double_booking or settings.get("allow_double_booking", False)
     max_per_slot = _get_max_per_slot(settings, allow_overbooking)
 
@@ -192,13 +201,20 @@ def create_appointment(
     if len(today_appointments.data or []) >= max_appointments:
         return {"error": "Limite de turnos por dia alcanzado"}
 
-    treatment = (
-        supabase.table("treatments")
-        .select("duration_minutes, base_price")
-        .eq("id", treatment_id)
-        .single()
-        .execute()
-    )
+    try:
+        treatment = (
+            supabase.table("treatments")
+            .select("duration_minutes, base_price")
+            .eq("id", treatment_id)
+            .single()
+            .execute()
+        )
+    except APIError as exc:
+        if exc.code == "PGRST116":
+            return {"error": "Tratamiento no registrado"}
+        raise
+    if not treatment.data:
+        return {"error": "Tratamiento no registrado"}
     duration = treatment.data["duration_minutes"] if treatment.data else 30
     base_price = treatment.data.get("base_price", 0) if treatment.data else 0
 
