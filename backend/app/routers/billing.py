@@ -2,6 +2,8 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 from app.main import supabase
+from app.services.audit import log_audit
+from app.services.observability import log_event
 
 router = APIRouter()
 
@@ -35,7 +37,16 @@ def create_plan(payload: PlanCreate):
         res = supabase.table("billing_plans").insert(payload.dict()).execute()
         if not res.data:
             raise HTTPException(status_code=400, detail="No se pudo crear plan")
-        return res.data[0]
+        plan = res.data[0]
+        log_audit(
+            "system",
+            "create_plan",
+            "billing_plans",
+            plan.get("id", ""),
+            {"name": plan.get("name"), "price_cents": plan.get("price_cents")},
+        )
+        log_event("billing_plan_created", {"plan_id": plan.get("id")}, clinic_id=None)
+        return plan
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -58,6 +69,19 @@ def create_subscription(payload: SubscriptionCreate):
         res = supabase.table("billing_subscriptions").insert(payload.dict()).execute()
         if not res.data:
             raise HTTPException(status_code=400, detail="No se pudo crear suscripcion")
-        return res.data[0]
+        sub = res.data[0]
+        log_audit(
+            payload.clinic_id,
+            "create_subscription",
+            "billing_subscriptions",
+            sub.get("id", ""),
+            {"plan_id": payload.plan_id, "status": payload.status},
+        )
+        log_event(
+            "subscription_created",
+            {"subscription_id": sub.get("id"), "plan_id": payload.plan_id},
+            clinic_id=payload.clinic_id,
+        )
+        return sub
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

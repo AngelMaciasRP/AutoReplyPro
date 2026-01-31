@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from typing import Optional
 from app.main import supabase
 from app.services.automation_runner import run_automations_for_date, run_automations_for_appointment
+from app.services.observability import log_event
 
 router = APIRouter()
 
@@ -111,10 +112,20 @@ def run_automation(payload: AutomationRun):
             if not apt.data:
                 raise HTTPException(status_code=404, detail="Turno no encontrado")
             msgs = run_automations_for_appointment(payload.trigger, apt.data)
+            log_event(
+                "automation_run",
+                {"trigger": payload.trigger, "appointment_id": payload.appointment_id, "count": len(msgs)},
+                clinic_id=apt.data.get("clinic_id"),
+            )
             return {"messages": msgs}
 
         if payload.date:
             msgs = run_automations_for_date(payload.clinic_id, payload.trigger, payload.date)
+            log_event(
+                "automation_run",
+                {"trigger": payload.trigger, "date": payload.date, "count": len(msgs)},
+                clinic_id=payload.clinic_id,
+            )
             return {"messages": msgs}
 
         raise HTTPException(status_code=400, detail="Falta date o appointment_id")

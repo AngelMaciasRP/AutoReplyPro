@@ -10,6 +10,7 @@ from app.main import supabase
 from app.services.realtime import broadcast_change
 from app.services.automation_runner import run_automations_for_appointment
 from app.services.audit import log_audit
+from app.services.observability import log_event
 
 router = APIRouter()
 
@@ -78,6 +79,16 @@ def create_appointment_route(data: AppointmentCreate):
                         "patient_id": appointment.get("patient_id"),
                     },
                 )
+                log_event(
+                    "appointment_created",
+                    {
+                        "appointment_id": appointment.get("id"),
+                        "date": appointment.get("date"),
+                        "start_time": appointment.get("start_time"),
+                        "treatment_id": appointment.get("treatment_id"),
+                    },
+                    clinic_id=data.clinic_id,
+                )
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -104,6 +115,15 @@ def reschedule_appointment_route(
                     "appointments",
                     appointment_id,
                     {"date": appointment.get("date"), "start_time": appointment.get("start_time")},
+                )
+                log_event(
+                    "appointment_rescheduled",
+                    {
+                        "appointment_id": appointment_id,
+                        "date": appointment.get("date"),
+                        "start_time": appointment.get("start_time"),
+                    },
+                    clinic_id=appointment.get("clinic_id", ""),
                 )
                 broadcast_change(
                     appointment.get("clinic_id", ""),
@@ -135,6 +155,11 @@ def confirm_appointment_route(appointment_id: str):
                 "appointments",
                 appointment_id,
                 {"status": "confirmed"},
+            )
+            log_event(
+                "appointment_confirmed",
+                {"appointment_id": appointment_id},
+                clinic_id=result.data[0].get("clinic_id", ""),
             )
             broadcast_change(
                 result.data[0].get("clinic_id", ""),
@@ -168,6 +193,11 @@ def cancel_appointment_route(appointment_id: str, reason: str = None):
                 "appointments",
                 appointment_id,
                 {"status": "cancelled", "reason": reason},
+            )
+            log_event(
+                "appointment_cancelled",
+                {"appointment_id": appointment_id},
+                clinic_id=result.data[0].get("clinic_id", ""),
             )
             broadcast_change(
                 result.data[0].get("clinic_id", ""),
