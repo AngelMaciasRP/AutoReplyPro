@@ -7,6 +7,7 @@ from app.services.agenda_logic import (
     get_available_slots
 )
 from app.main import supabase
+from app.services.realtime import broadcast_change
 
 router = APIRouter()
 
@@ -50,6 +51,18 @@ def create_appointment_route(data: AppointmentCreate):
             treatment_id=data.treatment_id,
             allow_double_booking=data.allow_double_booking
         )
+        if result and isinstance(result, dict):
+            appointment = result.get("appointment") or result
+            if isinstance(appointment, dict):
+                broadcast_change(
+                    data.clinic_id,
+                    "appointment_created",
+                    {
+                        "appointment_id": appointment.get("id"),
+                        "date": appointment.get("date"),
+                        "start_time": appointment.get("start_time"),
+                    },
+                )
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -67,6 +80,18 @@ def reschedule_appointment_route(
             new_date=data.new_date,
             new_time=data.new_time
         )
+        if result and isinstance(result, dict):
+            appointment = result.get("appointment") or result
+            if isinstance(appointment, dict):
+                broadcast_change(
+                    appointment.get("clinic_id", ""),
+                    "appointment_rescheduled",
+                    {
+                        "appointment_id": appointment_id,
+                        "date": appointment.get("date"),
+                        "start_time": appointment.get("start_time"),
+                    },
+                )
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -82,6 +107,11 @@ def confirm_appointment_route(appointment_id: str):
             .execute()
         
         if result.data:
+            broadcast_change(
+                result.data[0].get("clinic_id", ""),
+                "appointment_confirmed",
+                {"appointment_id": appointment_id},
+            )
             return {"success": True, "appointment": result.data[0]}
         
         return {"error": "Turno no encontrado"}
@@ -102,6 +132,11 @@ def cancel_appointment_route(appointment_id: str, reason: str = None):
             .execute()
         
         if result.data:
+            broadcast_change(
+                result.data[0].get("clinic_id", ""),
+                "appointment_cancelled",
+                {"appointment_id": appointment_id},
+            )
             return {"success": True, "message": "Turno cancelado"}
         
         return {"error": "Turno no encontrado"}

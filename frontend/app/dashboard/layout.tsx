@@ -15,6 +15,7 @@ const navItems = [
   { href: "/dashboard", label: "Resumen" },
   { href: "/dashboard/calendar", label: "Calendario" },
   { href: "/dashboard/patients", label: "Pacientes" },
+  { href: "/dashboard/playbooks", label: "Playbooks" },
   { href: "/dashboard/messages", label: "Mensajeria" },
   { href: "/dashboard/automations", label: "Automatizaciones" },
   { href: "/dashboard/roles", label: "Roles" },
@@ -102,7 +103,9 @@ export default function DashboardLayout({
         )
       : role === "doctor"
       ? navItems.filter((item) =>
-          ["/dashboard/calendar", "/dashboard/patients"].includes(item.href)
+          ["/dashboard/calendar", "/dashboard/patients", "/dashboard/playbooks"].includes(
+            item.href
+          )
         )
       : [];
 

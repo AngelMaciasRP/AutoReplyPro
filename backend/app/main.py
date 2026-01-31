@@ -60,7 +60,8 @@ from app.routers.messages import router as messages_router
 from app.routers.automations import router as automations_router
 from app.routers.billing import router as billing_router
 from app.routers.observability import router as observability_router
-from app.services.websocket_service import ws_manager
+from app.routers.playbooks import router as playbooks_router
+from app.services.socket_server import sio
 
 fastapi_app.include_router(clinic_settings_router, prefix="/api", tags=["clinic-settings"])
 fastapi_app.include_router(whatsapp_router, prefix="/whatsapp")
@@ -74,45 +75,7 @@ fastapi_app.include_router(messages_router, prefix="/api", tags=["messages"])
 fastapi_app.include_router(automations_router, prefix="/api", tags=["automations"])
 fastapi_app.include_router(billing_router, prefix="/api", tags=["billing"])
 fastapi_app.include_router(observability_router, prefix="/api", tags=["observability"])
-
-# ===============================
-# SOCKET.IO SETUP
-# ===============================
-sio = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*")
-
-@sio.event
-async def connect(sid, environ, auth):
-    clinic_id = (auth or {}).get("clinic_id", "default")
-    await ws_manager.connect(clinic_id, sid)
-    await sio.enter_room(sid, f"clinic_{clinic_id}")
-
-@sio.event
-async def disconnect(sid):
-    await ws_manager.disconnect_any(sid)
-
-async def _broadcast(clinic_id: str, event: str, data: dict, sid: str):
-    change = await ws_manager.broadcast_change(clinic_id, event, data)
-    await sio.emit(event, change, room=f"clinic_{clinic_id}", skip_sid=sid)
-
-@sio.event
-async def reschedule_appointment(sid, data):
-    clinic_id = data.get("clinic_id", "default")
-    await _broadcast(clinic_id, "appointment_rescheduled", data, sid)
-
-@sio.event
-async def confirm_appointment(sid, data):
-    clinic_id = data.get("clinic_id", "default")
-    await _broadcast(clinic_id, "appointment_confirmed", data, sid)
-
-@sio.event
-async def cancel_appointment(sid, data):
-    clinic_id = data.get("clinic_id", "default")
-    await _broadcast(clinic_id, "appointment_cancelled", data, sid)
-
-@sio.event
-async def create_appointment(sid, data):
-    clinic_id = data.get("clinic_id", "default")
-    await _broadcast(clinic_id, "appointment_created", data, sid)
+fastapi_app.include_router(playbooks_router, prefix="/api", tags=["playbooks"])
 
 # Wrap FastAPI with Socket.IO ASGI app
 app = socketio.ASGIApp(sio, other_asgi_app=fastapi_app)

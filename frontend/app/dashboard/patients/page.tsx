@@ -38,6 +38,10 @@ type PatientFile = {
 
 export default function PatientsPage() {
   const { role, ready } = useUserRole();
+  const apiBase =
+    process.env.NEXT_PUBLIC_API_URL ||
+    process.env.NEXT_PUBLIC_BACKEND_URL ||
+    "http://localhost:8000";
   const [clinicId, setClinicId] = useState<string>(
     "bbe2d079-55fc-45a7-8aeb-99bb7cfc7112"
   );
@@ -51,6 +55,7 @@ export default function PatientsPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [locale, setLocale] = useState<"es" | "en">("es");
+  const [playbook, setPlaybook] = useState<any | null>(null);
 
   const [form, setForm] = useState({
     full_name: "",
@@ -88,7 +93,7 @@ export default function PatientsPage() {
   }, [clinicId]);
 
   useEffect(() => {
-    fetch(`http://localhost:8000/api/clinic-settings/${clinicId}`)
+    fetch(`${apiBase}/api/clinic-settings/${clinicId}`)
       .then((res) => res.json())
       .then((data) => {
         if (data?.language) {
@@ -99,15 +104,31 @@ export default function PatientsPage() {
   }, [clinicId]);
 
   useEffect(() => {
-    fetch(`http://localhost:8000/api/treatments?clinic_id=${clinicId}`)
+    fetch(`${apiBase}/api/treatments?clinic_id=${clinicId}`)
       .then((res) => res.json())
       .then((data) => setTreatments(Array.isArray(data?.treatments) ? data.treatments : []))
       .catch(() => setTreatments([]));
   }, [clinicId]);
 
+  useEffect(() => {
+    if (!clinicId || !historyForm.treatment_id) {
+      setPlaybook(null);
+      return;
+    }
+    fetch(
+      `${apiBase}/api/playbooks?clinic_id=${clinicId}&treatment_id=${historyForm.treatment_id}`
+    )
+      .then((res) => res.json())
+      .then((data) => {
+        const list = Array.isArray(data?.playbooks) ? data.playbooks : [];
+        setPlaybook(list[0] || null);
+      })
+      .catch(() => setPlaybook(null));
+  }, [apiBase, clinicId, historyForm.treatment_id]);
+
   const loadPatients = (search?: string) => {
     const searchQuery = search ?? query;
-    const url = new URL("http://localhost:8000/api/patients");
+    const url = new URL(`${apiBase}/api/patients`);
     url.searchParams.set("clinic_id", clinicId);
     if (searchQuery.trim()) {
       url.searchParams.set("query", searchQuery.trim());
@@ -120,7 +141,7 @@ export default function PatientsPage() {
   };
 
   const loadPatientDetail = (patientId: string) => {
-    const url = new URL(`http://localhost:8000/api/patients/${patientId}`);
+    const url = new URL(`${apiBase}/api/patients/${patientId}`);
     url.searchParams.set("clinic_id", clinicId);
 
     fetch(url.toString())
@@ -155,7 +176,7 @@ export default function PatientsPage() {
 
   const handleCreatePatient = () => {
     setMessage(null);
-    fetch("http://localhost:8000/api/patients", {
+    fetch(`${apiBase}/api/patients`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ clinic_id: clinicId, ...form }),
@@ -178,7 +199,7 @@ export default function PatientsPage() {
   const handleUpdatePatient = () => {
     if (!selectedPatient) return;
     setMessage(null);
-    fetch(`http://localhost:8000/api/patients/${selectedPatient.id}`, {
+    fetch(`${apiBase}/api/patients/${selectedPatient.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
@@ -209,7 +230,7 @@ export default function PatientsPage() {
       next_treatment_id: historyForm.next_treatment_id || null,
       next_visit_at: historyForm.next_visit_at || null,
     };
-    fetch(`http://localhost:8000/api/patients/${selectedPatient.id}/history`, {
+    fetch(`${apiBase}/api/patients/${selectedPatient.id}/history`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -253,7 +274,7 @@ export default function PatientsPage() {
 
     const fileUrl = publicData?.publicUrl || "";
 
-    fetch(`http://localhost:8000/api/patients/${selectedPatient.id}/files`, {
+    fetch(`${apiBase}/api/patients/${selectedPatient.id}/files`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -289,7 +310,7 @@ export default function PatientsPage() {
     if (!targetId) return;
     const ok = window.confirm("¿Eliminar paciente? Esta accion no se puede deshacer.");
     if (!ok) return;
-    fetch(`http://localhost:8000/api/patients/${targetId}`, {
+    fetch(`${apiBase}/api/patients/${targetId}`, {
       method: "DELETE",
     })
       .then((res) => res.json())
@@ -447,6 +468,34 @@ export default function PatientsPage() {
                     </option>
                   ))}
                 </select>
+                {playbook && (
+                  <div className="playbook-preview">
+                    <strong>Playbook sugerido</strong>
+                    {Array.isArray(playbook.steps) && playbook.steps.length > 0 && (
+                      <ul>
+                        {playbook.steps.map((step: string, idx: number) => (
+                          <li key={`${step}-${idx}`}>{step}</li>
+                        ))}
+                      </ul>
+                    )}
+                    {playbook.notes_template && (
+                      <button
+                        type="button"
+                        className="ghost"
+                        onClick={() =>
+                          setHistoryForm({
+                            ...historyForm,
+                            notes:
+                              (historyForm.notes ? `${historyForm.notes}\n` : "") +
+                              playbook.notes_template,
+                          })
+                        }
+                      >
+                        Usar plantilla en notas
+                      </button>
+                    )}
+                  </div>
+                )}
                 <input
                   type="date"
                   value={historyForm.visited_at}

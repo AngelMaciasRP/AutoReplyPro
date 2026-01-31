@@ -85,6 +85,29 @@
   cursor: pointer;
 }
 
+.playbook-preview {
+  border: 1px dashed #cbd5f5;
+  background: #f8faff;
+  border-radius: 8px;
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+  grid-column: 1 / -1;
+}
+
+.playbook-preview ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.ghost {
+  background: transparent;
+  border: 1px solid #cbd5f5;
+  border-radius: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
 .history-list,
 .files-list {
   list-style: none;
