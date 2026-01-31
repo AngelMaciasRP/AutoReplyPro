@@ -1,5 +1,6 @@
 from typing import Any, Dict, Optional
 from app.main import supabase
+from app.services.alerts_dispatcher import dispatch_alerts
 
 
 def log_event(event_type: str, payload: Dict[str, Any], clinic_id: Optional[str] = None) -> None:
@@ -9,3 +10,4 @@ def log_event(event_type: str, payload: Dict[str, Any], clinic_id: Optional[str]
         ).execute()
     except Exception:
         return
+    dispatch_alerts(event_type, payload, clinic_id=clinic_id)
