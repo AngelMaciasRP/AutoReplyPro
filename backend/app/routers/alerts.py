@@ -4,6 +4,7 @@ from typing import Optional
 from app.main import supabase
 from app.services.audit import log_audit
 from app.services.observability import log_event
+from app.services.alerts_dispatcher import dispatch_alerts
 
 router = APIRouter()
 
@@ -131,23 +132,14 @@ def list_notifications(clinic_id: str, limit: int = 50):
 @router.post("/alerts/test")
 def test_alert(payload: AlertTest):
     try:
-        res = supabase.table("alert_notifications").insert(
-            {
-                "clinic_id": payload.clinic_id,
-                "rule_id": payload.rule_id,
-                "event_type": payload.event_type,
-                "payload": payload.payload,
-                "status": "sent",
-            }
-        ).execute()
-        if not res.data:
+        created = dispatch_alerts(payload.event_type, payload.payload, payload.clinic_id)
+        if not created:
             raise HTTPException(status_code=400, detail="No se pudo enviar alerta")
-        created = res.data[0]
         log_event(
             "alert_sent",
-            {"notification_id": created.get("id"), "event_type": payload.event_type},
+            {"event_type": payload.event_type, "count": len(created)},
             clinic_id=payload.clinic_id,
         )
-        return created
+        return {"notifications": created}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
