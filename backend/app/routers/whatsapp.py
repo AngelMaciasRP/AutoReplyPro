@@ -1,6 +1,8 @@
 import os
 from fastapi import APIRouter, HTTPException, Request
 from app.main import supabase
+from app.services.ai_scheduler import build_ai_reply
+from app.services.alerts_sender import send_whatsapp
 
 router = APIRouter()
 
@@ -29,7 +31,10 @@ async def whatsapp_webhook(payload: dict):
         wa_number = message["from"]
         text = message["text"]["body"]
 
-        clinic_id = payload.get("clinic_id")
+        clinic_id = payload.get("clinic_id") or os.getenv("DEFAULT_CLINIC_ID")
+        if not clinic_id:
+            first = supabase.table("clinic_settings").select("clinic_id").limit(1).execute()
+            clinic_id = first.data[0]["clinic_id"] if first.data else None
 
         # create/find thread
         thread = (
@@ -67,6 +72,19 @@ async def whatsapp_webhook(payload: dict):
                     "status": "received",
                 }
             ).execute()
+
+        # auto-reply with AI if enabled
+        settings = (
+            supabase.table("clinic_settings")
+            .select("bot_enabled,auto_reply_enabled")
+            .eq("clinic_id", clinic_id)
+            .single()
+            .execute()
+        )
+        if settings.data and settings.data.get("bot_enabled") and settings.data.get("auto_reply_enabled"):
+            reply = build_ai_reply(clinic_id, text, wa_number)
+            if reply:
+                send_whatsapp(wa_number, reply)
 
         return {"ok": True}
 
