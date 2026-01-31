@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 from app.main import supabase
+from app.services.automation_runner import run_automations_for_date, run_automations_for_appointment
 
 router = APIRouter()
 
@@ -21,6 +22,13 @@ class AutomationUpdate(BaseModel):
     channel: Optional[str] = None
     template: Optional[str] = None
     enabled: Optional[bool] = None
+
+
+class AutomationRun(BaseModel):
+    clinic_id: str
+    trigger: str
+    date: Optional[str] = None
+    appointment_id: Optional[str] = None
 
 
 @router.get("/automations")
@@ -85,5 +93,30 @@ def delete_automation(rule_id: str):
         if not res.data:
             raise HTTPException(status_code=404, detail="Automatizacion no encontrada")
         return {"ok": True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/automations/run")
+def run_automation(payload: AutomationRun):
+    try:
+        if payload.appointment_id:
+            apt = (
+                supabase.table("appointments")
+                .select("*")
+                .eq("id", payload.appointment_id)
+                .single()
+                .execute()
+            )
+            if not apt.data:
+                raise HTTPException(status_code=404, detail="Turno no encontrado")
+            msgs = run_automations_for_appointment(payload.trigger, apt.data)
+            return {"messages": msgs}
+
+        if payload.date:
+            msgs = run_automations_for_date(payload.clinic_id, payload.trigger, payload.date)
+            return {"messages": msgs}
+
+        raise HTTPException(status_code=400, detail="Falta date o appointment_id")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

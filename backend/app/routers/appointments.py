@@ -8,6 +8,7 @@ from app.services.agenda_logic import (
 )
 from app.main import supabase
 from app.services.realtime import broadcast_change
+from app.services.automation_runner import run_automations_for_appointment
 
 router = APIRouter()
 
@@ -63,6 +64,7 @@ def create_appointment_route(data: AppointmentCreate):
                         "start_time": appointment.get("start_time"),
                     },
                 )
+                run_automations_for_appointment("appointment_created", appointment)
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -112,6 +114,7 @@ def confirm_appointment_route(appointment_id: str):
                 "appointment_confirmed",
                 {"appointment_id": appointment_id},
             )
+            run_automations_for_appointment("appointment_confirmed", result.data[0])
             return {"success": True, "appointment": result.data[0]}
         
         return {"error": "Turno no encontrado"}
@@ -137,6 +140,7 @@ def cancel_appointment_route(appointment_id: str, reason: str = None):
                 "appointment_cancelled",
                 {"appointment_id": appointment_id},
             )
+            run_automations_for_appointment("appointment_cancelled", result.data[0])
             return {"success": True, "message": "Turno cancelado"}
         
         return {"error": "Turno no encontrado"}

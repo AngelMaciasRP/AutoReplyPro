@@ -30,6 +30,7 @@ export default function AutomationsPage() {
     "Hola {{patient_name}}, tu turno para {{date}} a las {{time}} fue registrado."
   );
   const [message, setMessage] = useState("");
+  const [runDate, setRunDate] = useState(new Date().toISOString().split("T")[0]);
   useEffect(() => {
     if (typeof window === "undefined") return;
     const stored = localStorage.getItem("active_clinic_id");
@@ -86,6 +87,25 @@ export default function AutomationsPage() {
     loadRules();
   };
 
+  const runAutomation = async () => {
+    if (!clinicId) return;
+    setMessage("");
+    const res = await fetch(`${apiBase}/api/automations/run`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        clinic_id: clinicId,
+        trigger,
+        date: runDate,
+      }),
+    });
+    if (res.ok) {
+      setMessage("Automatizacion ejecutada.");
+    } else {
+      setMessage("Error ejecutando automatizacion.");
+    }
+  };
+
   if (!ready) return null;
   if (role !== "admin") {
     return <div className="card">Sin permisos.</div>;
@@ -125,6 +145,28 @@ export default function AutomationsPage() {
         <button className="primary" onClick={createRule}>
           Crear regla
         </button>
+        {message && <p className="message">{message}</p>}
+      </section>
+
+      <section className="card">
+        <h2>Ejecutar automatizacion</h2>
+        <p>Para recordatorios o pruebas manuales.</p>
+        <div className="grid">
+          <select value={trigger} onChange={(e) => setTrigger(e.target.value)}>
+            <option value="appointment_created">Turno creado</option>
+            <option value="appointment_confirmed">Turno confirmado</option>
+            <option value="reminder_24h">Recordatorio 24h</option>
+            <option value="reminder_6h">Recordatorio 6h</option>
+          </select>
+          <input
+            type="date"
+            value={runDate}
+            onChange={(e) => setRunDate(e.target.value)}
+          />
+          <button className="ghost" onClick={runAutomation}>
+            Ejecutar ahora
+          </button>
+        </div>
         {message && <p className="message">{message}</p>}
       </section>
 
