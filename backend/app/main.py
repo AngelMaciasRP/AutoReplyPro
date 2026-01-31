@@ -61,6 +61,8 @@ from app.routers.automations import router as automations_router
 from app.routers.billing import router as billing_router
 from app.routers.observability import router as observability_router
 from app.routers.playbooks import router as playbooks_router
+from app.routers.backups import router as backups_router
+from app.routers.alerts import router as alerts_router
 from app.services.socket_server import sio
 
 fastapi_app.include_router(clinic_settings_router, prefix="/api", tags=["clinic-settings"])
@@ -76,6 +78,8 @@ fastapi_app.include_router(automations_router, prefix="/api", tags=["automations
 fastapi_app.include_router(billing_router, prefix="/api", tags=["billing"])
 fastapi_app.include_router(observability_router, prefix="/api", tags=["observability"])
 fastapi_app.include_router(playbooks_router, prefix="/api", tags=["playbooks"])
+fastapi_app.include_router(backups_router, prefix="/api", tags=["backups"])
+fastapi_app.include_router(alerts_router, prefix="/api", tags=["alerts"])
 
 # Wrap FastAPI with Socket.IO ASGI app
 app = socketio.ASGIApp(sio, other_asgi_app=fastapi_app)

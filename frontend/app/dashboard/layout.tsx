@@ -21,6 +21,8 @@ const navItems = [
   { href: "/dashboard/roles", label: "Roles" },
   { href: "/dashboard/audit", label: "Auditoria" },
   { href: "/dashboard/observability", label: "Observabilidad" },
+  { href: "/dashboard/alerts", label: "Alertas" },
+  { href: "/dashboard/backups", label: "Backups" },
   { href: "/dashboard/settings", label: "Configuracion" },
   { href: "/dashboard/billing", label: "Billing" },
   { href: "/dashboard/metrics", label: "Metricas" },
