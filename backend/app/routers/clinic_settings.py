@@ -3,6 +3,7 @@ from postgrest.exceptions import APIError
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict
 from datetime import datetime, date
+from app.services.audit import log_audit
 
 router = APIRouter()
 
@@ -116,6 +117,13 @@ def update_settings(
     if not res.data:
         raise HTTPException(status_code=500, detail="No se pudo actualizar")
 
+    log_audit(
+        clinic_id,
+        "update_settings",
+        "clinic_settings",
+        clinic_id,
+        {"updated": True},
+    )
     return res.data[0]
 
 
@@ -148,6 +156,13 @@ def add_blocked_dates(
         .update({"blocked_dates": merged}) \
         .eq("clinic_id", clinic_id) \
         .execute()
+    log_audit(
+        clinic_id,
+        "add_blocked_dates",
+        "clinic_settings",
+        clinic_id,
+        {"blocked_dates": new_dates},
+    )
     
     return {"blocked_dates": merged}
 
@@ -174,6 +189,13 @@ def remove_blocked_date(
         .update({"blocked_dates": updated}) \
         .eq("clinic_id", clinic_id) \
         .execute()
+    log_audit(
+        clinic_id,
+        "remove_blocked_date",
+        "clinic_settings",
+        clinic_id,
+        {"blocked_date": blocked_date},
+    )
     
     return {"blocked_dates": updated}
 
@@ -200,6 +222,13 @@ def add_blocked_period(
         .update({"blocked_periods": current_periods}) \
         .eq("clinic_id", clinic_id) \
         .execute()
+    log_audit(
+        clinic_id,
+        "add_blocked_period",
+        "clinic_settings",
+        clinic_id,
+        payload.dict(),
+    )
     
     return {"blocked_periods": current_periods}
 
@@ -226,6 +255,13 @@ def remove_blocked_period(
         .update({"blocked_periods": updated}) \
         .eq("clinic_id", clinic_id) \
         .execute()
+    log_audit(
+        clinic_id,
+        "remove_blocked_period",
+        "clinic_settings",
+        clinic_id,
+        {"index": period_id},
+    )
     
     return {"blocked_periods": updated}
 

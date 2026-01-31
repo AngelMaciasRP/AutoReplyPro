@@ -19,6 +19,7 @@ const navItems = [
   { href: "/dashboard/messages", label: "Mensajeria" },
   { href: "/dashboard/automations", label: "Automatizaciones" },
   { href: "/dashboard/roles", label: "Roles" },
+  { href: "/dashboard/audit", label: "Auditoria" },
   { href: "/dashboard/settings", label: "Configuracion" },
   { href: "/dashboard/billing", label: "Billing" },
   { href: "/dashboard/metrics", label: "Metricas" },

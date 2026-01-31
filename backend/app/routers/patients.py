@@ -3,6 +3,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from app.main import supabase
+from app.services.audit import log_audit
 
 router = APIRouter()
 
@@ -69,7 +70,15 @@ def create_patient(payload: PatientCreate):
         res = supabase.table("patients").insert(payload.dict()).execute()
         if not res.data:
             raise HTTPException(status_code=400, detail="No se pudo crear paciente")
-        return res.data[0]
+        created = res.data[0]
+        log_audit(
+            payload.clinic_id,
+            "create_patient",
+            "patients",
+            created.get("id", ""),
+            {"full_name": created.get("full_name")},
+        )
+        return created
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 
@@ -131,7 +140,15 @@ def update_patient(patient_id: str, payload: PatientUpdate):
         )
         if not res.data:
             raise HTTPException(status_code=404, detail="Paciente no encontrado")
-        return res.data[0]
+        updated = res.data[0]
+        log_audit(
+            updated.get("clinic_id", ""),
+            "update_patient",
+            "patients",
+            patient_id,
+            update_data,
+        )
+        return updated
     except HTTPException:
         raise
     except Exception as exc:
@@ -149,6 +166,14 @@ def delete_patient(patient_id: str):
         )
         if not res.data:
             raise HTTPException(status_code=404, detail="Paciente no encontrado")
+        deleted = res.data[0]
+        log_audit(
+            deleted.get("clinic_id", ""),
+            "delete_patient",
+            "patients",
+            patient_id,
+            {"full_name": deleted.get("full_name")},
+        )
         return {"ok": True}
     except HTTPException:
         raise
@@ -164,7 +189,19 @@ def add_patient_history(patient_id: str, payload: PatientHistoryCreate):
         res = supabase.table("patient_history").insert(row).execute()
         if not res.data:
             raise HTTPException(status_code=400, detail="No se pudo guardar historia")
-        return res.data[0]
+        created = res.data[0]
+        log_audit(
+            payload.clinic_id,
+            "add_patient_history",
+            "patient_history",
+            created.get("id", ""),
+            {
+                "patient_id": patient_id,
+                "treatment_id": payload.treatment_id,
+                "visited_at": payload.visited_at,
+            },
+        )
+        return created
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 
@@ -177,6 +214,18 @@ def add_patient_file(patient_id: str, payload: PatientFileCreate):
         res = supabase.table("patient_files").insert(row).execute()
         if not res.data:
             raise HTTPException(status_code=400, detail="No se pudo guardar archivo")
-        return res.data[0]
+        created = res.data[0]
+        log_audit(
+            payload.clinic_id,
+            "add_patient_file",
+            "patient_files",
+            created.get("id", ""),
+            {
+                "patient_id": patient_id,
+                "file_type": payload.file_type,
+                "file_url": payload.file_url,
+            },
+        )
+        return created
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))

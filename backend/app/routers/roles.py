@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional
 from app.main import supabase
+from app.services.audit import log_audit
 
 router = APIRouter()
 
@@ -50,23 +51,6 @@ def _default_roles() -> List[Role]:
     ]
 
 
-def _audit(clinic_id: str, actor_id: Optional[str], action: str, entity: str, entity_id: str, changes: dict):
-    try:
-        supabase.table("audit_logs").insert(
-            {
-                "clinic_id": clinic_id,
-                "actor_id": actor_id,
-                "action": action,
-                "entity": entity,
-                "entity_id": entity_id,
-                "changes": changes,
-            }
-        ).execute()
-    except Exception:
-        # audit is best-effort
-        pass
-
-
 @router.get("/roles")
 def list_roles():
     return {"roles": [r.dict() for r in _default_roles()]}
@@ -98,13 +82,13 @@ def create_clinic_user(payload: ClinicUserCreate):
         if not res.data:
             raise HTTPException(status_code=400, detail="No se pudo crear el usuario")
         created = res.data[0]
-        _audit(
+        log_audit(
             payload.clinic_id,
-            payload.actor_id,
             "invite_user",
             "clinic_users",
             created.get("id"),
             {"email": payload.email, "role": payload.role},
+            actor_id=payload.actor_id,
         )
         return created
     except Exception as e:
@@ -127,13 +111,13 @@ def update_clinic_user(user_id: str, payload: ClinicUserUpdate):
         if not res.data:
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
         updated = res.data[0]
-        _audit(
+        log_audit(
             updated.get("clinic_id"),
-            payload.actor_id,
             "update_user",
             "clinic_users",
             user_id,
             updates,
+            actor_id=payload.actor_id,
         )
         return updated
     except Exception as e:
@@ -141,16 +125,22 @@ def update_clinic_user(user_id: str, payload: ClinicUserUpdate):
 
 
 @router.get("/audit-logs")
-def list_audit_logs(clinic_id: str, limit: int = 50):
+def list_audit_logs(
+    clinic_id: str,
+    limit: int = 50,
+    action: Optional[str] = None,
+    entity: Optional[str] = None,
+    actor_id: Optional[str] = None,
+):
     try:
-        res = (
-            supabase.table("audit_logs")
-            .select("*")
-            .eq("clinic_id", clinic_id)
-            .order("created_at", desc=True)
-            .limit(limit)
-            .execute()
-        )
+        query = supabase.table("audit_logs").select("*").eq("clinic_id", clinic_id)
+        if action:
+            query = query.eq("action", action)
+        if entity:
+            query = query.eq("entity", entity)
+        if actor_id:
+            query = query.eq("actor_id", actor_id)
+        res = query.order("created_at", desc=True).limit(limit).execute()
         return {"logs": res.data or []}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

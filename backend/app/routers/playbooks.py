@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional
 from app.main import supabase
+from app.services.audit import log_audit
 
 router = APIRouter()
 
@@ -34,7 +35,16 @@ def create_playbook(payload: PlaybookPayload):
     try:
         row = payload.dict()
         res = supabase.table("treatment_playbooks").insert(row).execute()
-        return {"playbook": res.data[0] if res.data else None}
+        playbook = res.data[0] if res.data else None
+        if playbook:
+            log_audit(
+                payload.clinic_id,
+                "create_playbook",
+                "treatment_playbooks",
+                playbook.get("id", ""),
+                {"treatment_id": payload.treatment_id, "title": payload.title},
+            )
+        return {"playbook": playbook}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -44,7 +54,16 @@ def update_playbook(playbook_id: str, payload: PlaybookPayload):
     try:
         row = payload.dict()
         res = supabase.table("treatment_playbooks").update(row).eq("id", playbook_id).execute()
-        return {"playbook": res.data[0] if res.data else None}
+        playbook = res.data[0] if res.data else None
+        if playbook:
+            log_audit(
+                payload.clinic_id,
+                "update_playbook",
+                "treatment_playbooks",
+                playbook_id,
+                {"treatment_id": payload.treatment_id, "title": payload.title},
+            )
+        return {"playbook": playbook}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -53,6 +72,14 @@ def update_playbook(playbook_id: str, payload: PlaybookPayload):
 def delete_playbook(playbook_id: str):
     try:
         res = supabase.table("treatment_playbooks").delete().eq("id", playbook_id).execute()
+        if res.data:
+            log_audit(
+                res.data[0].get("clinic_id", ""),
+                "delete_playbook",
+                "treatment_playbooks",
+                playbook_id,
+                {"title": res.data[0].get("title")},
+            )
         return {"ok": True, "deleted": res.data or []}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
