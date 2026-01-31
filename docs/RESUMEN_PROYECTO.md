@@ -4,10 +4,12 @@
 Construir un sistema operativo clinico digital con agenda inteligente, gestion de pacientes, automatizacion operativa, atencion automatica y soporte multiclínica con tiempo real. Base preparada para pagos, IA y notificaciones.
 
 ## Stack
-- Frontend: Next.js
+- Frontend: Next.js 16
 - Backend: FastAPI
 - DB: Supabase (Postgres)
 - Realtime: Socket.io (python-socketio + socket.io-client)
+- WhatsApp: Cloud API (webhook)
+- IA: OpenAI (auto-respuesta y agenda)
 
 ## Lo que funciona hoy
 ### Calendario
@@ -33,6 +35,7 @@ Construir un sistema operativo clinico digital con agenda inteligente, gestion d
 - Ficha con historia clinica en modo lectura.
 - Boton para editar solo cuando se requiere.
 - Carga de radiografias/panoramicas (subir archivo).
+ - Historial clinico con sugerencias por playbook.
 
 ### Settings
 - Horarios, timezone y dias laborales.
@@ -45,6 +48,35 @@ Construir un sistema operativo clinico digital con agenda inteligente, gestion d
 - Socket.io integrado en backend y frontend.
 - Eventos: connect, disconnect, reschedule, confirm, cancel, create.
 - Sincronizacion en vivo por clinic_id.
+
+### Playbooks odontologicos
+- Protocolos por tratamiento (pasos, insumos, duracion, plantilla de notas).
+- Edicion desde dashboard y sugerencia en historial clinico.
+
+### Mensajeria + WhatsApp
+- Inbox con threads y mensajes por paciente.
+- Webhook verificado con Meta.
+- Auto-respuesta con IA (agendar, responder, sugerir horarios).
+
+### Automatizaciones
+- Reglas por evento (turno creado, confirmado, recordatorios).
+- Ejecucion manual por fecha.
+
+### Auditoria
+- Logs por accion (usuarios, pacientes, turnos, settings).
+- UI de auditoria con filtros.
+
+### Observabilidad
+- Eventos del sistema (appointments, automations, billing, backups).
+- UI de eventos.
+
+### Billing
+- Planes y suscripciones base.
+
+### Backups y alertas
+- Registro de backups manuales.
+- Reglas de alertas y notificaciones internas.
+- Envio real via email/WhatsApp/webhook (segun regla).
 
 ### Optimizaciones
 - Cache de availability en frontend (5 min).
@@ -62,33 +94,28 @@ Construir un sistema operativo clinico digital con agenda inteligente, gestion d
 - Tours guiados (tooltips) y estados vacios utiles.
 
 ### Roles y permisos
-- Roles (admin/recepcion/doctor/superadmin).
-- Permisos por modulo y accion (RBAC).
-- Auditoria de acciones por usuario.
+- Permisos finos por accion (RBAC granular).
+- Superadmin y auditoria multi-clinica.
 
 ### Auditoria y Logs
-- Auditoria de cambios (who/what/when) con UI.
 - Logs estructurados (json) con request_id.
-- Retencion y busqueda de logs.
+- Retencion, busqueda avanzada y export.
 
 ### Billing
-- Planes, suscripciones, limites por clinica.
-- Facturacion, impuestos y estado de pagos.
-- Integracion con Stripe o proveedor local.
+- Limites por plan y facturacion real.
+- Integracion con Stripe/MercadoPago.
 
 ### Notificaciones reales
-- WhatsApp y Email con proveedor (Twilio/SendGrid/etc).
-- Plantillas y reglas por evento (confirmacion, recordatorio, cancelacion).
+- Plantillas multi-canal avanzadas.
+- Entrega/lectura y reintentos.
 
 ### Mensajeria real
-- Inbox unificado por paciente.
-- Historial de conversaciones y estados (entregado/leido).
-- Integracion con WhatsApp/Email/SMS.
+- Estados de entrega/lectura.
+- Escalamiento a operador.
 
 ### Automatizaciones
-- Reglas si/entonces (recordatorios, confirmaciones, reprogramaciones).
-- Auto-gestion de sobreturnos segun reglas clinica.
-- Alertas por saturacion o huecos de agenda.
+- Reglas if/then avanzadas y plantillas por clinica.
+- Sobreturnos automaticos segun demanda.
 
 ### Seguridad avanzada
 - MFA, rotacion de tokens, expiracion de sesiones.
@@ -96,8 +123,7 @@ Construir un sistema operativo clinico digital con agenda inteligente, gestion d
 - Cifrado de archivos sensibles.
 
 ### Observabilidad
-- Metricas (latencia, errores, uso por clinica).
-- Alertas y dashboards.
+- Dashboards y alertas proactivas.
 
 ### Backups
 - Backups automaticos y restore probado.
